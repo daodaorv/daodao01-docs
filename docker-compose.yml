@@ -1,0 +1,84 @@
+services:
+  # MySQL 数据库服务
+  mysql:
+    image: mysql:8.0
+    container_name: daodao-mysql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: daodao_root_2024
+      MYSQL_DATABASE: daodao
+      MYSQL_USER: daodao_dev
+      MYSQL_PASSWORD: daodao_dev_2024
+      MYSQL_CHARSET: utf8mb4
+      MYSQL_COLLATION: utf8mb4_unicode_ci
+    ports:
+      - "3306:3306"
+    volumes:
+      # 数据持久化
+      - mysql_data:/var/lib/mysql
+      # 初始化脚本
+      - ./docker/mysql/init:/docker-entrypoint-initdb.d
+      # 配置文件
+      - ./docker/mysql/conf/my.cnf:/etc/mysql/conf.d/my.cnf
+      # 日志目录
+      - mysql_logs:/var/log/mysql
+    command: >
+      --default-authentication-plugin=mysql_native_password
+      --character-set-server=utf8mb4
+      --collation-server=utf8mb4_unicode_ci
+      --max_connections=1000
+      --innodb_buffer_pool_size=1G
+    networks:
+      - daodao-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-pdaodao_root_2024"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # Redis 缓存服务 (可选)
+  redis:
+    image: redis:7.0-alpine
+    container_name: daodao-redis
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+      - ./docker/redis/redis.conf:/usr/local/etc/redis/redis.conf
+    command: redis-server /usr/local/etc/redis/redis.conf
+    networks:
+      - daodao-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
+  # 数据库管理工具 (可选)
+  adminer:
+    image: adminer:latest
+    container_name: daodao-adminer
+    restart: always
+    ports:
+      - "8080:8080"
+    environment:
+      ADMINER_DEFAULT_SERVER: mysql
+    networks:
+      - daodao-network
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+volumes:
+  mysql_data:
+    driver: local
+  redis_data:
+    driver: local
+  mysql_logs:
+    driver: local
+
+networks:
+  daodao-network:
+    driver: bridge

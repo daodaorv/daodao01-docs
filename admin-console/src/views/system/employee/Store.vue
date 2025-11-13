@@ -1,0 +1,6 @@
+<template>
+  <PlaceholderPage page-title="门店员工" module-type="系统管理" />
+</template>
+<script setup>
+import PlaceholderPage from '@/components/PlaceholderPage.vue'
+</script>
